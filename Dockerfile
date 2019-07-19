@@ -2,7 +2,7 @@ FROM jfisherp/ojdk8:211b12
 
 MAINTAINER Jonny Fisher <jonny.fisherp@gmail.com>
 
-COPY localtime /etc/localtime
+#COPY localtime /etc/localtime
 
 ENV CATALINA_HOME="/usr/local/tomcat" \
     PATH="/usr/local/tomcat/bin:$PATH" \
@@ -12,11 +12,14 @@ ENV CATALINA_HOME="/usr/local/tomcat" \
     APR_VERSION=1.7.0 \
     TOMCAT_NATIVE_VERSION=1.2.23 \
     JAVA_HOME=/usr/lib/jvm/default-jvm
-RUN mkdir -p "${CATALINA_HOME}"
+RUN mkdir -p "${CATALINA_HOME}" 
+
 WORKDIR $CATALINA_HOME
 
 RUN set -x \
-  && apk --no-cache add --virtual build-dependencies wget ca-certificates tar alpine-sdk gnupg \
+  && apk --no-cache add --virtual build-dependencies wget ca-certificates tar alpine-sdk gnupg tzdata \
+  && cp /usr/share/zoneinfo/Mexico/General /etc/localtime \
+  && echo "America/Mexico_City" > /etc/timezone \
   && update-ca-certificates \
   && wget -q --no-check-certificate "${APACHE_MIRROR}/tomcat/tomcat-${TOMCAT_MAJOR_VERSION}/v${TOMCAT_MINOR_VERSION}/bin/apache-tomcat-${TOMCAT_MINOR_VERSION}.tar.gz" \
   && wget -q --no-check-certificate "${APACHE_MIRROR}/tomcat/tomcat-${TOMCAT_MAJOR_VERSION}/v${TOMCAT_MINOR_VERSION}/bin/apache-tomcat-${TOMCAT_MINOR_VERSION}.tar.gz.asc" \
@@ -32,7 +35,7 @@ RUN set -x \
   && make && make install \
   && ln -sv "${CATALINA_HOME}/lib/libtcnative-1.so" "/usr/lib/" && ln -sv "/lib/libz.so.1" "/usr/lib/libz.so.1" \
   && sed -i 's/SSLEngine="on"/SSLEngine="off"/g' "${CATALINA_HOME}/conf/server.xml" \
-  && apk del --purge build-dependencies \
+  && apk del --purge build-dependencies build-dependencies ca-certificates alpine-sdk gnupg tzdata \
   && addgroup -S tomcat -g 1001 \
   && adduser -S tomcat -u 1001 -G tomcat \
   && chown -R tomcat:tomcat ${CATALINA_HOME} \
